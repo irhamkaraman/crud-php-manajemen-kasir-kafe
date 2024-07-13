@@ -14,7 +14,7 @@ Project "Daftar Toko" adalah aplikasi web sederhana yang dibangun menggunakan PH
 
 ## 📸 Tampilan
 
-![Tampilan Aplikasi](assets/img/image.png)
+![Tampilan Aplikasi](Assets/img/image.png)
 
 ## 🛠️ Teknologi yang Digunakan
 
