@@ -3,51 +3,116 @@ class AuthController
 {
   public function __construct()
   {
-    if (isset($_SESSION['user'])) {
+    if (isset($_SESSION['auth'])) {
       header("Location: " . url('/'));
     }
   }
+
   public function login()
+  {
+    return require_once 'Views/Auth/login.php';
+  }
+
+  public function auth()
   {
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
       global $conn;
 
-      $username = $_POST['username'];
-      $password = $_POST['password'];
+      $email = $_POST['email'];
+      $password = md5($_POST['password']);
 
-      $sql = "SELECT * FROM user WHERE username = '$username' AND password = '$password'";
-      $result = mysqli_query($conn, $sql);
+      if (empty($email) || empty($password)) {
+        $_SESSION['error'] = 'Semua kolom harus diisi!';
+        header("Location: " . url('/login'));
+        exit;
+      }
 
-      if (mysqli_num_rows($result) > 0) {
-        $_SESSION['user'] = $username;
-        header("Location: " . url('/'));
-      } else {
-        require_once 'Views/Auth/login.php';
+      $result = mysqli_query($conn, "SELECT password FROM user WHERE email = '$email'");
+
+      if (mysqli_num_rows($result) == 0) {
+        $_SESSION['error'] = 'Akun belum terdaftar!';
+        header("Location: " . url('/login'));
+        exit;
+      } elseif (mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        if ($password == $row['password']) {
+          $_SESSION['auth'] = $row;
+          $_SESSION['email'] = $email;
+          $_SESSION['success'] = 'Anda berhasil Login!';
+          header("Location: " . url('/'));
+        } else {
+          $_SESSION['error'] = 'Password salah!';
+          header("Location: " . url('/login'));
+          exit;
+        }
       }
     } else {
-      require_once 'Views/Auth/login.php';
+      $_SESSION['error_message'] = 'Anda harus login terlebih dahulu!';
+      header("Location: " . url('/login'));
+      exit;
     }
   }
 
-  public function register() {
+  public function register()
+  {
+    return require_once 'Views/Auth/register.php';
+  }
+
+  public function store()
+  {
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
       global $conn;
-      $username = $_POST['username'];
-      $password = $_POST['password'];
-      $sql = "INSERT INTO user (username, password) VALUES ('$username', '$password')";
-      if (mysqli_query($conn, $sql)) {
-        $_SESSION['user'] = $username;
-        header("Location: " . url('/'));
+      $username = $_POST['name'];
+      $email = $_POST['email'];
+      $password = ($_POST['password']);
+      $password_confirmation = $_POST['password_confirmation'];
+
+      if (empty($username) || empty($email) || empty($password) || empty($password_confirmation)) {
+        $_SESSION['error'] = 'Semua kolom harus diisi!';
+        header("Location: " . url('/register'));
+        exit;
+      }
+
+      $sql = "SELECT * FROM user WHERE email = '$email'";
+      $result = mysqli_query($conn, $sql);
+      if (mysqli_num_rows($result) > 0) {
+        $_SESSION['error'] = 'Username atau email sudah terdaftar!';
+        header("Location: " . url('/register'));
+        exit;
+      }
+
+      if ($password == $password_confirmation) {
+        $password = md5($password);
       } else {
-        require_once 'Views/Auth/register.php'; 
+        $_SESSION['error'] = 'Konfirmasi kata sandi tidak cocok!';
+        header("Location: " . url('/register'));
+        exit;
+      }
+
+      $role = 'Member';
+      $sql = "INSERT INTO user (name, email, password, role) VALUES ('$username', '$email', '$password', '$role')";
+      if (mysqli_query($conn, $sql)) {
+        $_SESSION['success'] = 'Pendaftaran akun berhasil!';
+        header("Location: " . url('/login'));
+      } else {
+        $_SESSION['error'] = 'Pendaftaran akun gagal!';
+        header("Location: " . url('/register'));
+        exit;
       }
     } else {
-      require_once 'Views/Auth/register.php';
+      $_SESSION['error'] = 'Anda harus login terlebih dahulu!';
+      header("Location: " . url('/register'));
+      exit;
     }
   }
 
-  public function logout() {
-    session_destroy();
-    header("Location: " . url('/'));
+  public function logout()
+  {
+    unset($_SESSION['auth']);
+    unset($_SESSION['email']);
+    
+    $_SESSION['success'] = 'Anda berhasil keluar!';
+    header("Location: " . url('/login'));
+    exit;
   }
 }
